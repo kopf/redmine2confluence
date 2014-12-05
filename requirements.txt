@@ -1,0 +1,3 @@
+logbook
+requests
+python-redmine
