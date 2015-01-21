@@ -8,7 +8,7 @@ from settings import REDMINE, CONFLUENCE, PROJECTS
 log = logbook.Logger('redmine2confluence')
 
 
-def process(wiki_page):
+def process(redmine, wiki_page):
     """Processes a wiki page, getting all metadata and reformatting body"""
     # Get again, to get attachments:
     wiki_page = redmine.wiki_page.get(
@@ -34,7 +34,7 @@ if __name__ == '__main__':
         confluence.create_space(space, project.name, project.description)
         for wiki_page in project.wiki_pages:
             log.info(u"Importing: {0}".format(wiki_page.title))
-            processed = process(wiki_page)
+            processed = process(redmine, wiki_page)
             confluence.create_page(
                 processed['title'], processed['body'], processed['space'],
                 processed['username'], processed['display_name'])

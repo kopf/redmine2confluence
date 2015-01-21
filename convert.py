@@ -2,7 +2,7 @@ import sys
 import os
 import re
 # we need a list of redmine spaces for reference
-from redmine_spaces import spaces, jira_url
+from settings import PROJECTS, JIRA_URL
 
 MatchObject = type(re.search('', ''))
 
@@ -29,7 +29,7 @@ def wiki_reference_to_confluence(reference):
         project = parts[0]
         # look up the required space here.
         try:
-            space = spaces[project]
+            space = PROJECTS[project]
         except KeyError:
             # if it is not mapped, we will just return the project reference
             space = project
@@ -112,7 +112,7 @@ def macro_to_confluence(content):
     # code (<pre> block)
     content = re.sub('(?s)<pre>(.*?)</pre>','{code}\g<1>{code}',content)
     # Redmine issue ID converted to Jira
-    content = re.sub('\s#([0-9]+)', jira_url, content )
+    content = re.sub('\s#([0-9]+)', JIRA_URL, content )
     # remove the rest of redmine macro. include them as comments. Someone can filter/replace them later
     content = re.sub("(?s){{(.*)}}", 'redmine_macro:{{\g<1>}}', content)
     return content
