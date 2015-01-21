@@ -24,13 +24,6 @@ def process(wiki_page):
     }
 
 
-def create_page(processed):
-    """Creates a wiki page on confluence using parsed result from process()"""
-    return confluence.create_page(
-        processed['title'], processed['body'], processed['space'],
-        processed['username'], processed['display_name'])
-
-
 if __name__ == '__main__':
     redmine = Redmine(REDMINE['url'], key=REDMINE['key'])
     confluence = Confluence(
@@ -41,4 +34,7 @@ if __name__ == '__main__':
         confluence.create_space(space, project.name, project.description)
         for wiki_page in project.wiki_pages:
             log.info(u"Importing: {0}".format(wiki_page.title))
-            page = process(wiki_page)
+            processed = process(wiki_page)
+            confluence.create_page(
+                processed['title'], processed['body'], processed['space'],
+                processed['username'], processed['display_name'])
