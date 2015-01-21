@@ -37,7 +37,7 @@ class Confluence(object):
                     "username": username,
                     "displayName": display_name
                 }
-            }
+            },
             "body": {
                 "storage": {
                     "value": body,
