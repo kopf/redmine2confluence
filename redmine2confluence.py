@@ -11,8 +11,7 @@ log = logbook.Logger('redmine2confluence')
 def process(redmine, wiki_page):
     """Processes a wiki page, getting all metadata and reformatting body"""
     # Get again, to get attachments:
-    wiki_page = redmine.wiki_page.get(
-        wiki_page.title, project_id=project.id, include='attachments')
+    wiki_page = wiki_page.refresh(include='attachments')
     ##### build tree object of all wiki pages
     body = wiki_to_confluence(wiki_page.text)
     return {
