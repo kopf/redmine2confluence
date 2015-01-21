@@ -19,7 +19,7 @@ def process(redmine, wiki_page):
         'title': wiki_page.title,
         'body': body,
         'space': space,
-        'username': wiki_page.author.login,
+        'username': wiki_page.author.refresh().login,
         'display_name': wiki_page.author.name
     }
 
