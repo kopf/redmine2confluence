@@ -3,7 +3,6 @@ from redmine import Redmine
 
 from confluence import Confluence
 from convert import wiki_to_confluence
-from redminelib import get_user
 from settings import REDMINE, CONFLUENCE, PROJECTS
 
 log = logbook.Logger('redmine2confluence')
@@ -15,13 +14,12 @@ def process(wiki_page):
     wiki_page = redmine.wiki_page.get(
         wiki_page.title, project_id=project.id, include='attachments')
     ##### build tree object of all wiki pages
-    user = get_user(wiki_page.author.id)
     body = wiki_to_confluence(wiki_page.text)
     return {
         'title': wiki_page.title,
         'body': body,
         'space': space,
-        'username': user['user']['login'],
+        'username': wiki_page.author.login,
         'display_name': wiki_page.author.name
     }
 
