@@ -26,11 +26,18 @@ class Confluence(object):
                             headers=self.headers)
         return res.json()
 
-    def create_page(self, title, body, space, parent_id=None):
+    def create_page(self, title, body, space, username, display_name, parent_id=None):
         data = {
             "type": "page",
             "title": title,
             "space": {"key": space},
+            "version": {
+                "by": {
+                    "type": "known",
+                    "username": username,
+                    "displayName": display_name
+                }
+            }
             "body": {
                 "storage": {
                     "value": body,
