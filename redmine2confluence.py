@@ -1,8 +1,9 @@
 import logbook
 from redmine import Redmine
+import pypandoc
 
 from confluence import Confluence
-from convert import wiki_to_confluence
+from convert import urls_to_confluence
 from settings import REDMINE, CONFLUENCE, PROJECTS
 
 log = logbook.Logger('redmine2confluence')
@@ -12,10 +13,17 @@ def process(redmine, wiki_page):
     """Processes a wiki page, getting all metadata and reformatting body"""
     # Get again, to get attachments:
     wiki_page = wiki_page.refresh(include='attachments')
+    # process title
+    title = wiki_page.title.replace('_', ' ')
+    # process body
+    body = urls_to_confluence(wiki_page.text) # translate links
+    if body.startswith('h1. %s' % title):
+        # strip extra repeated title from within body text
+        body = body[len('h1. %s' % title):]
+    body = pypandoc.convert(body, 'html', format='textile') # convert textile
     ##### build tree object of all wiki pages
-    body = wiki_to_confluence(wiki_page.text)
     return {
-        'title': wiki_page.title,
+        'title': title,
         'body': body,
         'space': space,
         'username': wiki_page.author.refresh().login,
