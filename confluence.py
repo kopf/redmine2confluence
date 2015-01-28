@@ -10,6 +10,18 @@ class Confluence(object):
         self.password = password
         self.headers = {'Content-type': 'application/json'}
 
+    def _post(self, url, data, files=None, headers=None, jsonify=True):
+        if headers is None:
+            headers = self.headers
+        if jsonify:
+            data = json.dumps(data)
+        res = requests.post(url, auth=(self.username, self.password), data=data,
+                            headers=headers, files=files)
+        if not 200 <= res.status_code < 300:
+            import pudb;pudb.set_trace()
+            raise RuntimeError(res.text)
+        return res.json()
+
     def create_space(self, key, name, description):
         data = {
             'key': key, 'name': name,
@@ -20,11 +32,7 @@ class Confluence(object):
                 }
             }
         }
-        res = requests.post('{0}/space'.format(self.base_url),
-                            auth=(self.username, self.password),
-                            data=json.dumps(data),
-                            headers=self.headers)
-        return res.json()
+        return self._post('{0}/space'.format(self.base_url), data)
 
     def create_page(self, title, body, space, username, display_name, parent_id=None):
         data = {
@@ -47,8 +55,12 @@ class Confluence(object):
         }
         if parent_id is not None:
             data["ancestors"] = [{"type": "page", "id": parent_id}]
-        res = requests.post('{0}/content'.format(self.base_url),
-                            auth=(self.username, self.password),
-                            data=json.dumps(data),
-                            headers=self.headers)
-        return res.json()
+        return self._post('{0}/content'.format(self.base_url), data)
+
+    def add_attachment(self, confluence_id, filename, data, description):
+        url = '{0}/content/{1}/child/attachment'.format(
+            self.base_url, confluence_id)
+        return self._post(url, {'comment': description},
+                          files={'file': (filename, data)},
+                          headers={'X-Atlassian-Token': 'nocheck'},
+                          jsonify=False)

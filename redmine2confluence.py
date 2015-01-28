@@ -1,5 +1,6 @@
 import logbook
 from redmine import Redmine
+import requests
 import pypandoc
 
 from confluence import Confluence
@@ -27,7 +28,8 @@ def process(redmine, wiki_page):
         'body': body,
         'space': space,
         'username': wiki_page.author.refresh().login,
-        'display_name': wiki_page.author.name
+        'display_name': wiki_page.author.name,
+        'attachments': [attachment for attachment in wiki_page.attachments]
     }
 
 
@@ -42,6 +44,12 @@ if __name__ == '__main__':
         for wiki_page in project.wiki_pages:
             log.info(u"Importing: {0}".format(wiki_page.title))
             processed = process(redmine, wiki_page)
-            confluence.create_page(
+            page = confluence.create_page(
                 processed['title'], processed['body'], processed['space'],
                 processed['username'], processed['display_name'])
+            for attachment in processed['attachments']:
+                data = requests.get(
+                    u'{0}?key={1}'.format(attachment.content_url, REDMINE['key']),
+                    stream=True)
+                confluence.add_attachment(
+                    page['id'], attachment.filename, data.raw, attachment.description)
