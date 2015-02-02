@@ -1,4 +1,5 @@
 from HTMLParser import HTMLParser
+import re
 
 import logbook
 from redmine import Redmine
@@ -29,7 +30,11 @@ class XMLFixer(HTMLParser):
     def fix_tags(self, html):
         self.feed(html)
         for tag in self.tags:
-            html = html.replace('<%s>' % tag, '&lt;%s&gt;' % tag)
+            # tags in self.tags are all lower case, so regex that shit:
+            regex = re.compile(re.escape('<%s>' % tag), re.IGNORECASE)
+            for match in re.findall(regex, html):
+                fixed = match.replace('<', '&lt;').replace('>', '&gt;')
+                html = html.replace(match, fixed)
         return html
 
 
@@ -45,6 +50,8 @@ def process(redmine, wiki_page):
         # strip extra repeated title from within body text
         body = body[len('h1. %s' % title):]
     body = pypandoc.convert(body, 'html', format='textile') # convert textile
+    xml_fixer = XMLFixer()
+    body = xml_fixer.fix_tags(body)
     ##### build tree object of all wiki pages
     return {
         'title': title,
@@ -67,20 +74,9 @@ if __name__ == '__main__':
         for wiki_page in project.wiki_pages:
             log.info(u"Importing: {0}".format(wiki_page.title))
             processed = process(redmine, wiki_page)
-            try:
-                page = confluence.create_page(
-                    processed['title'], processed['body'], processed['space'],
-                    processed['username'], processed['display_name'])
-            except InvalidXML:
-                log.warn(u'Invalid XML: {0}. Retrying with fix...'.format(wiki_page.title))
-                xml_fixer = XMLFixer()
-                try:
-                    page = confluence.create_page(
-                        processed['title'], xml_fixer.fix_tags(processed['body']),
-                        processed['space'], processed['username'],
-                        processed['display_name'])
-                except InvalidXML:
-                    log.error('Retry failed! Aborting.')
+            page = confluence.create_page(
+                processed['title'], processed['body'], processed['space'],
+                processed['username'], processed['display_name'])
             for attachment in processed['attachments']:
                 log.info(u'Adding attachment: {0} ({1} bytes)'.format(
                     attachment.filename, attachment.filesize))
