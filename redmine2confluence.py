@@ -1,9 +1,11 @@
+import codecs
+
 import logbook
 from redmine import Redmine
 import requests
 import pypandoc
 
-from confluence import Confluence
+from confluence import Confluence, InvalidXML
 from convert import urls_to_confluence
 from settings import REDMINE, CONFLUENCE, PROJECTS
 
@@ -44,9 +46,13 @@ if __name__ == '__main__':
         for wiki_page in project.wiki_pages:
             log.info(u"Importing: {0}".format(wiki_page.title))
             processed = process(redmine, wiki_page)
-            page = confluence.create_page(
-                processed['title'], processed['body'], processed['space'],
-                processed['username'], processed['display_name'])
+            try:
+                page = confluence.create_page(
+                    processed['title'], processed['body'], processed['space'],
+                    processed['username'], processed['display_name'])
+            except InvalidXML:
+                log.error(u'Invalid XML: {0}. Aborting.'.format(wiki_page.title))
+                continue
             for attachment in processed['attachments']:
                 data = requests.get(
                     u'{0}?key={1}'.format(attachment.content_url, REDMINE['key']),
