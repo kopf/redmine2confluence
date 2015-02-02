@@ -54,6 +54,8 @@ if __name__ == '__main__':
                 log.error(u'Invalid XML: {0}. Aborting.'.format(wiki_page.title))
                 continue
             for attachment in processed['attachments']:
+                log.info(u'Adding attachment: {0} ({1} bytes)'.format(
+                    attachment.filename, attachment.filesize))
                 data = requests.get(
                     u'{0}?key={1}'.format(attachment.content_url, REDMINE['key']),
                     stream=True)
