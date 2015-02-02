@@ -8,6 +8,10 @@ class InvalidXML(Exception):
     pass
 
 
+class Timeout(Exception):
+    pass
+
+
 class Confluence(object):
     def __init__(self, base_url, username, password):
         self.base_url = base_url
@@ -25,7 +29,9 @@ class Confluence(object):
         if not 200 <= res.status_code < 300:
             error = json.loads(res.text)
             if error['message'] == 'Error parsing xhtml':
-                raise InvalidXML()
+                raise InvalidXML(error['message'])
+            elif 'Read timed out' in error['message']:
+                raise Timeout(error['message'])
             import pudb;pudb.set_trace()
             raise RuntimeError(res.text)
         return res.json()

@@ -7,7 +7,7 @@ from redmine.exceptions import ResourceAttrError
 import requests
 import pypandoc
 
-from confluence import Confluence, InvalidXML
+from confluence import Confluence, Timeout
 from convert import urls_to_confluence
 from settings import REDMINE, CONFLUENCE, PROJECTS
 
@@ -108,8 +108,15 @@ if __name__ == '__main__':
                 data = requests.get(
                     u'{0}?key={1}'.format(attachment.content_url, REDMINE['key']),
                     stream=True)
-                confluence.add_attachment(
-                    page['id'], attachment.filename, data.raw, attachment.description)
+                retry = True
+                while retry:
+                    try:
+                        confluence.add_attachment(
+                            page['id'], attachment.filename, data.raw, attachment.description)
+                    except Timeout:
+                        log.warn('Timed out. Retrying...')
+                    else:
+                        retry = False
 
         # organize pages hierarchically
         for title, created_page in created_pages.iteritems():
