@@ -14,7 +14,7 @@ from settings import REDMINE, CONFLUENCE, PROJECTS
 log = logbook.Logger('redmine2confluence')
 
 
-BLACKLIST = ['Datenbank_Multitenancy']
+BLACKLIST = []
 
 
 class XMLFixer(HTMLParser):
