@@ -88,7 +88,8 @@ if __name__ == '__main__':
         confluence.create_space(space, project.name, project.description)
 
         # create pages
-        for wiki_page in project.wiki_pages:
+        _ = len(project.wiki_pages)
+        for wiki_page in project.wiki_pages[:project.wiki_pages.total_count]:
             if wiki_page.title in BLACKLIST:
                 continue
             log.info(u"Importing: {0}".format(wiki_page.title))
