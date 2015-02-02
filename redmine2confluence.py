@@ -3,6 +3,7 @@ import re
 
 import logbook
 from redmine import Redmine
+from redmine.exceptions import ResourceAttrError
 import requests
 import pypandoc
 
@@ -81,9 +82,12 @@ if __name__ == '__main__':
     confluence = Confluence(
         CONFLUENCE['url'], CONFLUENCE['username'], CONFLUENCE['password'])
     for proj_name, space in PROJECTS.iteritems():
+        created_pages = {}
         log.info(u"Creating space {0}".format(space))
         project = redmine.project.get(proj_name)
         confluence.create_space(space, project.name, project.description)
+
+        # create pages
         for wiki_page in project.wiki_pages:
             if wiki_page.title in BLACKLIST:
                 continue
@@ -92,6 +96,12 @@ if __name__ == '__main__':
             page = confluence.create_page(
                 processed['title'], processed['body'], processed['space'],
                 processed['username'], processed['display_name'])
+            try:
+                parent = wiki_page.parent['title']
+            except ResourceAttrError:
+                parent = None
+            created_pages[wiki_page.title] = {
+                'id': page['id'], 'parent': parent}
             for attachment in processed['attachments']:
                 log.info(u'Adding attachment: {0} ({1} bytes)'.format(
                     attachment.filename, attachment.filesize))
@@ -100,3 +110,11 @@ if __name__ == '__main__':
                     stream=True)
                 confluence.add_attachment(
                     page['id'], attachment.filename, data.raw, attachment.description)
+
+        # organize pages hierarchically
+        for title, created_page in created_pages.iteritems():
+            if created_page.get('parent') and created_page['parent'] != 'Wiki':
+                log.info(u'Moving "{0}" beneath "{1}"'.format(
+                    title, created_page['parent']))
+                confluence.move_page(created_page['id'],
+                                     created_pages[created_page['parent']]['id'])
