@@ -1,4 +1,4 @@
-import codecs
+from HTMLParser import HTMLParser
 
 import logbook
 from redmine import Redmine
@@ -10,6 +10,27 @@ from convert import urls_to_confluence
 from settings import REDMINE, CONFLUENCE, PROJECTS
 
 log = logbook.Logger('redmine2confluence')
+
+
+class XMLFixer(HTMLParser):
+    def __init__(self):
+        HTMLParser.__init__(self)
+        self.tags = []
+
+    def handle_starttag(self, tag, attrs):
+        self.tags.insert(0, tag)
+
+    def handle_endtag(self, tag):
+        try:
+            self.tags.remove(tag)
+        except ValueError:
+            pass
+
+    def fix_tags(self, html):
+        self.feed(html)
+        for tag in self.tags:
+            html = html.replace('<%s>' % tag, '&lt;%s&gt;' % tag)
+        return html
 
 
 def process(redmine, wiki_page):
@@ -51,8 +72,15 @@ if __name__ == '__main__':
                     processed['title'], processed['body'], processed['space'],
                     processed['username'], processed['display_name'])
             except InvalidXML:
-                log.error(u'Invalid XML: {0}. Aborting.'.format(wiki_page.title))
-                continue
+                log.warn(u'Invalid XML: {0}. Retrying with fix...'.format(wiki_page.title))
+                xml_fixer = XMLFixer()
+                try:
+                    page = confluence.create_page(
+                        processed['title'], xml_fixer.fix_tags(processed['body']),
+                        processed['space'], processed['username'],
+                        processed['display_name'])
+                except InvalidXML:
+                    log.error('Retry failed! Aborting.')
             for attachment in processed['attachments']:
                 log.info(u'Adding attachment: {0} ({1} bytes)'.format(
                     attachment.filename, attachment.filesize))
