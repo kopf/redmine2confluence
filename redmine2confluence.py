@@ -13,6 +13,9 @@ from settings import REDMINE, CONFLUENCE, PROJECTS
 log = logbook.Logger('redmine2confluence')
 
 
+BLACKLIST = ['Datenbank_Multitenancy']
+
+
 class XMLFixer(HTMLParser):
     def __init__(self):
         HTMLParser.__init__(self)
@@ -32,9 +35,19 @@ class XMLFixer(HTMLParser):
         for tag in self.tags:
             # tags in self.tags are all lower case, so regex that shit:
             regex = re.compile(re.escape('<%s>' % tag), re.IGNORECASE)
-            for match in re.findall(regex, html):
+            matches = re.findall(regex, html)
+            for match in matches:
                 fixed = match.replace('<', '&lt;').replace('>', '&gt;')
                 html = html.replace(match, fixed)
+            if not matches:
+                # wasn't matched. Probably <something like this>, with 'like'
+                # and 'this' interpreted as tag attributes.
+                # try again, just converting the open bracket
+                regex = re.compile(re.escape('<%s' % tag), re.IGNORECASE)
+                matches = re.findall(regex, html)
+                for match in matches:
+                    fixed = match.replace('<', '&lt;')
+                    html = html.replace(match, fixed)
         return html
 
 
@@ -72,6 +85,8 @@ if __name__ == '__main__':
         project = redmine.project.get(proj_name)
         confluence.create_space(space, project.name, project.description)
         for wiki_page in project.wiki_pages:
+            if wiki_page.title in BLACKLIST:
+                continue
             log.info(u"Importing: {0}".format(wiki_page.title))
             processed = process(redmine, wiki_page)
             page = confluence.create_page(
