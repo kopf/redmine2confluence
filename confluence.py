@@ -1,4 +1,5 @@
 import json
+import xmlrpclib
 
 import requests
 
@@ -71,3 +72,9 @@ class Confluence(object):
                           files={'file': (filename, data)},
                           headers={'X-Atlassian-Token': 'nocheck'},
                           jsonify=False)
+
+    def move_page(self, page_id, target_page_id):
+        server = xmlrpclib.ServerProxy('http://localhost:8090/rpc/xmlrpc')
+        token = server.confluence2.login(self.username, self.password)
+        server.confluence2.movePage(
+            token, str(page_id), str(target_page_id), 'append')
