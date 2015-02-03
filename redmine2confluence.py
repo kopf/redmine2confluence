@@ -16,8 +16,6 @@ log = logbook.Logger('redmine2confluence')
 confluence = Confluence(CONFLUENCE['url'], CONFLUENCE['username'],
                         CONFLUENCE['password'])
 redmine = Redmine(REDMINE['url'], key=REDMINE['key'])
-
-BLACKLIST = []
 STATS = {}
 
 
@@ -128,8 +126,6 @@ def main():
 
         # create pages
         for wiki_page in project.wiki_pages[:get_total_count(proj_name)]:
-            if wiki_page.title in BLACKLIST:
-                continue
             log.info(u"Importing: {0}".format(wiki_page.title))
             page = add_page(wiki_page, space)
             try:
