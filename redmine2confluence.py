@@ -7,7 +7,7 @@ import logbook
 from redmine import Redmine
 from redmine.exceptions import ResourceAttrError
 import requests
-import pypandoc
+from textile import textile
 
 from confluence import Confluence, Timeout, InvalidXML
 from convert import urls_to_confluence
@@ -75,7 +75,7 @@ def process(redmine, wiki_page, nuclear=False):
     if body.startswith('h1. %s' % title):
         # strip extra repeated title from within body text
         body = body[len('h1. %s' % title):]
-    body = pypandoc.convert(body, 'html', format='textile') # convert textile
+    body = textile(body)
     if not nuclear:
         xml_fixer = XMLFixer()
         body = xml_fixer.fix_tags(body)

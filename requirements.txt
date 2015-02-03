@@ -1,5 +1,5 @@
 logbook
 requests
 python-redmine
-pypandoc
 BeautifulSoup4
+textile
