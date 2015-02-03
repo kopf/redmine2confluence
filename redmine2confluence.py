@@ -62,11 +62,11 @@ def process(redmine, wiki_page, nuclear=False):
     body = wiki_page.text
     if nuclear:
         ## HTMLEncode ALL tags
-        body = body.replace('<', '&lt;').replace('>', '&gt;')
+        body = body.replace('<', '&lt;')
         # HTMLDecode redmine tags
-        body = body.replace('&lt;code&gt;', '<code>').replace('&lt;/code&gt;', '</code>')
-        body = body.replace('&lt;notextile&gt;', '<notextile>').replace('&lt;/notextile&gt;', '</notextile>')
-        body = body.replace('&lt;pre&gt;', '<pre>').replace('&lt;/pre&gt;', '</pre>')
+        body = body.replace('&lt;code>', '<code>').replace('&lt;/code>', '</code>')
+        body = body.replace('&lt;notextile>', '<notextile>').replace('&lt;/notextile>', '</notextile>')
+        body = body.replace('&lt;pre>', '<pre>').replace('&lt;/pre>', '</pre>')
     # translate links
     body = urls_to_confluence(body)
     if body.startswith('h1. %s' % title):
