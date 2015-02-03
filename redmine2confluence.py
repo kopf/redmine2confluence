@@ -13,7 +13,9 @@ from convert import urls_to_confluence
 from settings import REDMINE, CONFLUENCE, PROJECTS
 
 log = logbook.Logger('redmine2confluence')
-
+confluence = Confluence(CONFLUENCE['url'], CONFLUENCE['username'],
+                        CONFLUENCE['password'])
+redmine = Redmine(REDMINE['url'], key=REDMINE['key'])
 
 BLACKLIST = []
 
@@ -94,8 +96,9 @@ def get_total_count(project_id):
     return len(r['wiki_pages'])
 
 
-def add_page(processed):
-    """Adds page using dict returned by process()"""
+def add_page(wiki_page, space):
+    """Adds page to confluence"""
+    processed = process(redmine, wiki_page)
     try:
         page = confluence.create_page(
             processed['title'], processed['body'], space,
@@ -113,9 +116,6 @@ def add_page(processed):
 
 
 def main():
-    redmine = Redmine(REDMINE['url'], key=REDMINE['key'])
-    confluence = Confluence(
-        CONFLUENCE['url'], CONFLUENCE['username'], CONFLUENCE['password'])
     for proj_name, space in PROJECTS.iteritems():
         created_pages = {}
         log.info(u"Creating space {0}".format(space))
@@ -127,8 +127,7 @@ def main():
             if wiki_page.title in BLACKLIST:
                 continue
             log.info(u"Importing: {0}".format(wiki_page.title))
-            processed = process(redmine, wiki_page)
-            page = add_page(processed)
+            page = add_page(wiki_page, space)
             try:
                 parent = wiki_page.parent['title']
             except ResourceAttrError:

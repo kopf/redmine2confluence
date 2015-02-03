@@ -1,8 +1,10 @@
 import json
 import xmlrpclib
 
+import logbook
 import requests
 
+log = logbook.Logger('confluence')
 
 class InvalidXML(Exception):
     pass
@@ -24,8 +26,13 @@ class Confluence(object):
             headers = self.headers
         if jsonify:
             data = json.dumps(data)
-        res = requests.post(url, auth=(self.username, self.password), data=data,
-                            headers=headers, files=files)
+        try:
+            res = requests.post(url, auth=(self.username, self.password),
+                                data=data, headers=headers, files=files)
+        except (requests.exceptions.ConnectionError,
+                requests.exceptions.Timeout) as e:
+            log.warn('Exception occurred making request: {0}. Retrying...'.format(e))
+            return self._post(url, data, files=files, headers=headers, jsonify=jsonify)
         if not 200 <= res.status_code < 300:
             error = json.loads(res.text)
             if error['message'] == 'Error parsing xhtml':

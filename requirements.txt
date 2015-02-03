@@ -2,3 +2,4 @@ logbook
 requests
 python-redmine
 pypandoc
+BeautifulSoup4
