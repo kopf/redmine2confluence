@@ -1,5 +1,6 @@
 from HTMLParser import HTMLParser
 import re
+import traceback
 
 from bs4 import BeautifulSoup
 import logbook
@@ -116,6 +117,20 @@ def add_page(wiki_page, space):
     return page
 
 
+def fix_img_tags(page_id):
+    page = confluence.get_page(page_id)
+    soup = BeautifulSoup(page['body']['view']['value'])
+    changed = False
+    for img in soup.find_all('img'):
+        if '/' not in img['src']:
+            img['src'] = '%s/download/attachments/%s/%s' % (
+                CONFLUENCE['website_url'], page_id, img['src']
+            )
+            changed = True
+    if changed:
+        confluence.update_page(page_id, unicode(soup))
+
+
 def main():
     for proj_name, space in PROJECTS.iteritems():
         STATS[space] = {
@@ -153,10 +168,12 @@ def main():
                             log.warn('Timed out. Retrying...')
                         else:
                             retry = False
+                if wiki_page.attachments:
+                    fix_img_tags(page['id'])
             except Exception as e:
                 msg = 'Uncaught exception during import of %s! Page not imported!'
                 log.error(msg % wiki_page.title)
-                log.error(e)
+                traceback.print_exc()
                 STATS[space]['failed import'].append(wiki_page.title)
 
         # organize pages hierarchically
@@ -171,7 +188,7 @@ def main():
                 except Exception as e:
                     msg = 'Uncaught exception during hierarchical move of %s!'
                     log.error(msg % wiki_page.title)
-                    log.error(e)
+                    traceback.print_exc()
                     STATS[space]['failed hierarchical move'].append(
                         wiki_page.title)
 
