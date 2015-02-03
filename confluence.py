@@ -20,6 +20,8 @@ class Confluence(object):
         self.username = username
         self.password = password
         self.headers = {'Content-type': 'application/json'}
+        self.server = xmlrpclib.ServerProxy('http://localhost:8090/rpc/xmlrpc')
+        self.token = self.server.confluence2.login(self.username, self.password)
 
     def _post(self, url, data, files=None, headers=None, jsonify=True):
         if headers is None:
@@ -90,7 +92,31 @@ class Confluence(object):
                           jsonify=False)
 
     def move_page(self, page_id, target_page_id):
-        server = xmlrpclib.ServerProxy('http://localhost:8090/rpc/xmlrpc')
-        token = server.confluence2.login(self.username, self.password)
-        server.confluence2.movePage(
-            token, str(page_id), str(target_page_id), 'append')
+        self.server.confluence2.movePage(
+            self.token, str(page_id), str(target_page_id), 'append')
+
+    def get_page(self, page_id):
+        return requests.get('{0}/content/{1}?expand=body.view,version'.format(self.base_url, page_id),
+                            auth=(self.username, self.password), headers=self.headers).json()
+
+    def update_page(self, page_id, content):
+        current_page = self.get_page(page_id)
+        ver_number = current_page['version']['number'] + 1
+        title = current_page['title']
+        data = {
+            "id": page_id,
+            "type": "page",
+            "title": title,
+            "body":{
+                "storage":{
+                    "value": content,
+                    "representation": "storage"
+                }
+            },
+            "version":{
+                "number": ver_number
+            }
+        }
+        return requests.put('{0}/content/{1}'.format(self.base_url, page_id),
+                            auth=(self.username, self.password),
+                            headers=self.headers, data=json.dumps(data)).json()
