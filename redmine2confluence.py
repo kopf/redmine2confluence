@@ -77,6 +77,13 @@ def process(redmine, wiki_page):
     }
 
 
+def get_total_count(project_id):
+    """Workaround for bug in python-redmine"""
+    url = '%s/projects/%s/wiki/index.json?key=%s'
+    r = requests.get(url % (REDMINE['url'], project_id, REDMINE['key'])).json()
+    return len(r['wiki_pages'])
+
+
 if __name__ == '__main__':
     redmine = Redmine(REDMINE['url'], key=REDMINE['key'])
     confluence = Confluence(
@@ -88,8 +95,7 @@ if __name__ == '__main__':
         confluence.create_space(space, project.name, project.description)
 
         # create pages
-        _ = len(project.wiki_pages)
-        for wiki_page in project.wiki_pages[:project.wiki_pages.total_count]:
+        for wiki_page in project.wiki_pages[:get_total_count(proj_name)]:
             if wiki_page.title in BLACKLIST:
                 continue
             log.info(u"Importing: {0}".format(wiki_page.title))
@@ -101,8 +107,7 @@ if __name__ == '__main__':
                 parent = wiki_page.parent['title']
             except ResourceAttrError:
                 parent = None
-            created_pages[wiki_page.title] = {
-                'id': page['id'], 'parent': parent}
+            created_pages[wiki_page.title] = {'id': page['id'], 'parent': parent}
             for attachment in processed['attachments']:
                 log.info(u'Adding attachment: {0} ({1} bytes)'.format(
                     attachment.filename, attachment.filesize))
@@ -121,7 +126,7 @@ if __name__ == '__main__':
 
         # organize pages hierarchically
         for title, created_page in created_pages.iteritems():
-            if created_page.get('parent') and created_page['parent'] != 'Wiki':
+            if created_page.get('parent') not in [None, 'Wiki']:
                 log.info(u'Moving "{0}" beneath "{1}"'.format(
                     title, created_page['parent']))
                 confluence.move_page(created_page['id'],
