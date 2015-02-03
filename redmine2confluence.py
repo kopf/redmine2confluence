@@ -70,8 +70,6 @@ def process(redmine, wiki_page, nuclear=False):
         body = body.replace('&lt;code>', '<code>').replace('&lt;/code>', '</code>')
         body = body.replace('&lt;notextile>', '<notextile>').replace('&lt;/notextile>', '</notextile>')
         body = body.replace('&lt;pre>', '<pre>').replace('&lt;/pre>', '</pre>')
-        # Use beautifulsoup to clean up stuff like <p><pre>xyz</p></pre>
-        body = unicode(BeautifulSoup(body))
     # translate links
     body = urls_to_confluence(body)
     if body.startswith('h1. %s' % title):
@@ -81,6 +79,9 @@ def process(redmine, wiki_page, nuclear=False):
     if not nuclear:
         xml_fixer = XMLFixer()
         body = xml_fixer.fix_tags(body)
+    else:
+        # Use beautifulsoup to clean up stuff like <p><pre>xyz</p></pre>
+        body = unicode(BeautifulSoup(body))
     return {
         'title': title,
         'body': body,
