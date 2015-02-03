@@ -17,41 +17,6 @@ log = logbook.Logger('redmine2confluence')
 BLACKLIST = []
 
 
-class XMLFixer(HTMLParser):
-    def __init__(self):
-        HTMLParser.__init__(self)
-        self.tags = []
-
-    def handle_starttag(self, tag, attrs):
-        self.tags.insert(0, tag)
-
-    def handle_endtag(self, tag):
-        try:
-            self.tags.remove(tag)
-        except ValueError:
-            pass
-
-    def fix_tags(self, html):
-        self.feed(html)
-        for tag in self.tags:
-            # tags in self.tags are all lower case, so regex that shit:
-            regex = re.compile(re.escape('<%s>' % tag), re.IGNORECASE)
-            matches = re.findall(regex, html)
-            for match in matches:
-                fixed = match.replace('<', '&lt;').replace('>', '&gt;')
-                html = html.replace(match, fixed)
-            if not matches:
-                # wasn't matched. Probably <something like this>, with 'like'
-                # and 'this' interpreted as tag attributes.
-                # try again, just converting the open bracket
-                regex = re.compile(re.escape('<%s' % tag), re.IGNORECASE)
-                matches = re.findall(regex, html)
-                for match in matches:
-                    fixed = match.replace('<', '&lt;')
-                    html = html.replace(match, fixed)
-        return html
-
-
 def process(redmine, wiki_page):
     """Processes a wiki page, getting all metadata and reformatting body"""
     # Get again, to get attachments:
@@ -59,18 +24,21 @@ def process(redmine, wiki_page):
     # process title
     title = wiki_page.title.replace('_', ' ')
     # process body
-    body = urls_to_confluence(wiki_page.text) # translate links
+    ## HTMLEncode ALL tags
+    body = wiki_page.text.replace('<', '&lt;').replace('>', '&gt;')
+    # HTMLDecode redmine tags
+    body = body.replace('&lt;code&gt;', '<code>').replace('&lt;/code&gt;', '</code>')
+    body = body.replace('&lt;notextile&gt;', '<notextile>').replace('&lt;/notextile&gt;', '</notextile>')
+    body = body.replace('&lt;pre&gt;', '<pre>').replace('&lt;/pre&gt;', '</pre>')
+    # translate links
+    body = urls_to_confluence(body)
     if body.startswith('h1. %s' % title):
         # strip extra repeated title from within body text
         body = body[len('h1. %s' % title):]
     body = pypandoc.convert(body, 'html', format='textile') # convert textile
-    xml_fixer = XMLFixer()
-    body = xml_fixer.fix_tags(body)
-    ##### build tree object of all wiki pages
     return {
         'title': title,
         'body': body,
-        'space': space,
         'username': wiki_page.author.refresh().login,
         'display_name': wiki_page.author.name,
         'attachments': [attachment for attachment in wiki_page.attachments]
@@ -101,7 +69,7 @@ if __name__ == '__main__':
             log.info(u"Importing: {0}".format(wiki_page.title))
             processed = process(redmine, wiki_page)
             page = confluence.create_page(
-                processed['title'], processed['body'], processed['space'],
+                processed['title'], processed['body'], space,
                 processed['username'], processed['display_name'])
             try:
                 parent = wiki_page.parent['title']
