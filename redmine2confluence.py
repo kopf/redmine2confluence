@@ -18,6 +18,7 @@ confluence = Confluence(CONFLUENCE['url'], CONFLUENCE['username'],
 redmine = Redmine(REDMINE['url'], key=REDMINE['key'])
 
 BLACKLIST = []
+STATS = {}
 
 
 class XMLFixer(HTMLParser):
@@ -106,6 +107,8 @@ def add_page(wiki_page, space):
             processed['username'], processed['display_name'])
     except InvalidXML:
         log.warn('Invalid XML generated. Going for the nuclear option...')
+        STATS.setdefault(space, {}).setdefault('nuclear', [])
+        STATS[space]['nuclear'].append(wiki_page.title)
         processed = process(redmine, wiki_page, nuclear=True)
         try:
             page = confluence.create_page(
@@ -139,12 +142,12 @@ def main():
                     attachment.filename, attachment.filesize))
                 data = requests.get(
                     u'{0}?key={1}'.format(attachment.content_url, REDMINE['key']),
-                    stream=True)
+                    stream=True).raw.read()
                 retry = True
                 while retry:
                     try:
                         confluence.add_attachment(
-                            page['id'], attachment.filename, data.raw, attachment.description)
+                            page['id'], attachment.filename, data, attachment.description)
                     except Timeout:
                         log.warn('Timed out. Retrying...')
                     else:
@@ -161,3 +164,12 @@ def main():
 
 if __name__ == '__main__':
     main()
+    log.info('====================')
+    log.info('Statistics:')
+    log.info('====================')
+    for space in STATS:
+        for key in STATS[space]:
+            log.info('%s:' % key)
+            for title in STATS[space][key]:
+                log.info('    %s' % title)
+        log.info('====================')
