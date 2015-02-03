@@ -1,6 +1,7 @@
 from HTMLParser import HTMLParser
 import re
 
+from bs4 import BeautifulSoup
 import logbook
 from redmine import Redmine
 from redmine.exceptions import ResourceAttrError
@@ -67,6 +68,8 @@ def process(redmine, wiki_page, nuclear=False):
         body = body.replace('&lt;code>', '<code>').replace('&lt;/code>', '</code>')
         body = body.replace('&lt;notextile>', '<notextile>').replace('&lt;/notextile>', '</notextile>')
         body = body.replace('&lt;pre>', '<pre>').replace('&lt;/pre>', '</pre>')
+        # Use beautifulsoup to clean up stuff like <p><pre>xyz</p></pre>
+        body = unicode(BeautifulSoup(body))
     # translate links
     body = urls_to_confluence(body)
     if body.startswith('h1. %s' % title):
@@ -80,8 +83,7 @@ def process(redmine, wiki_page, nuclear=False):
         'title': title,
         'body': body,
         'username': wiki_page.author.refresh().login,
-        'display_name': wiki_page.author.name,
-        'attachments': [attachment for attachment in wiki_page.attachments]
+        'display_name': wiki_page.author.name
     }
 
 
@@ -92,7 +94,25 @@ def get_total_count(project_id):
     return len(r['wiki_pages'])
 
 
-if __name__ == '__main__':
+def add_page(processed):
+    """Adds page using dict returned by process()"""
+    try:
+        page = confluence.create_page(
+            processed['title'], processed['body'], space,
+            processed['username'], processed['display_name'])
+    except InvalidXML:
+        log.warn('Invalid XML generated. Going for the nuclear option...')
+        processed = process(redmine, wiki_page, nuclear=True)
+        try:
+            page = confluence.create_page(
+                processed['title'], processed['body'], space,
+                processed['username'], processed['display_name'])
+        except InvalidXML:
+            import pudb;pudb.set_trace()
+    return page
+
+
+def main():
     redmine = Redmine(REDMINE['url'], key=REDMINE['key'])
     confluence = Confluence(
         CONFLUENCE['url'], CONFLUENCE['username'], CONFLUENCE['password'])
@@ -108,22 +128,13 @@ if __name__ == '__main__':
                 continue
             log.info(u"Importing: {0}".format(wiki_page.title))
             processed = process(redmine, wiki_page)
-            try:
-                page = confluence.create_page(
-                    processed['title'], processed['body'], space,
-                    processed['username'], processed['display_name'])
-            except InvalidXML:
-                log.warn('Invalid XML generated. Going for the nuclear option...')
-                processed = process(redmine, wiki_page, nuclear=True)
-                page = confluence.create_page(
-                    processed['title'], processed['body'], space,
-                    processed['username'], processed['display_name'])
+            page = add_page(processed)
             try:
                 parent = wiki_page.parent['title']
             except ResourceAttrError:
                 parent = None
             created_pages[wiki_page.title] = {'id': page['id'], 'parent': parent}
-            for attachment in processed['attachments']:
+            for attachment in wiki_page.attachments:
                 log.info(u'Adding attachment: {0} ({1} bytes)'.format(
                     attachment.filename, attachment.filesize))
                 data = requests.get(
@@ -146,3 +157,7 @@ if __name__ == '__main__':
                     title, created_page['parent']))
                 confluence.move_page(created_page['id'],
                                      created_pages[created_page['parent']]['id'])
+
+
+if __name__ == '__main__':
+    main()
