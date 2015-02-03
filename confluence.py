@@ -32,6 +32,10 @@ class Confluence(object):
                 raise InvalidXML(error['message'])
             elif 'Read timed out' in error['message']:
                 raise Timeout(error['message'])
+            elif 'same file name as an existing attachment' in error['message']:
+                # Append an underscore to the filename, before extension
+                files['file'] = (files['file'][0].replace('.', '_.'), files['file'][1])
+                return self._post(url, data, files=files, headers=headers, jsonify=jsonify)
             import pudb;pudb.set_trace()
             raise RuntimeError(res.text)
         return res.json()
