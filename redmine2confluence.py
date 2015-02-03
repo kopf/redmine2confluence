@@ -105,7 +105,6 @@ def add_page(wiki_page, space):
             processed['username'], processed['display_name'])
     except InvalidXML:
         log.warn('Invalid XML generated. Going for the nuclear option...')
-        STATS.setdefault(space, {}).setdefault('nuclear', [])
         STATS[space]['nuclear'].append(wiki_page.title)
         processed = process(redmine, wiki_page, nuclear=True)
         try:
@@ -119,6 +118,11 @@ def add_page(wiki_page, space):
 
 def main():
     for proj_name, space in PROJECTS.iteritems():
+        STATS[space] = {
+            'nuclear': [],
+            'failed import': [],
+            'failed hierarchical move': []
+        }
         created_pages = {}
         log.info(u"Creating space {0}".format(space))
         project = redmine.project.get(proj_name)
@@ -126,36 +130,50 @@ def main():
 
         # create pages
         for wiki_page in project.wiki_pages[:get_total_count(proj_name)]:
-            log.info(u"Importing: {0}".format(wiki_page.title))
-            page = add_page(wiki_page, space)
             try:
-                parent = wiki_page.parent['title']
-            except ResourceAttrError:
-                parent = None
-            created_pages[wiki_page.title] = {'id': page['id'], 'parent': parent}
-            for attachment in wiki_page.attachments:
-                log.info(u'Adding attachment: {0} ({1} bytes)'.format(
-                    attachment.filename, attachment.filesize))
-                data = requests.get(
-                    u'{0}?key={1}'.format(attachment.content_url, REDMINE['key']),
-                    stream=True).raw.read()
-                retry = True
-                while retry:
-                    try:
-                        confluence.add_attachment(
-                            page['id'], attachment.filename, data, attachment.description)
-                    except Timeout:
-                        log.warn('Timed out. Retrying...')
-                    else:
-                        retry = False
+                log.info(u"Importing: {0}".format(wiki_page.title))
+                page = add_page(wiki_page, space)
+                try:
+                    parent = wiki_page.parent['title']
+                except ResourceAttrError:
+                    parent = None
+                created_pages[wiki_page.title] = {'id': page['id'], 'parent': parent}
+                for attachment in wiki_page.attachments:
+                    log.info(u'Adding attachment: {0} ({1} bytes)'.format(
+                        attachment.filename, attachment.filesize))
+                    data = requests.get(
+                        u'{0}?key={1}'.format(attachment.content_url, REDMINE['key']),
+                        stream=True).raw.read()
+                    retry = True
+                    while retry:
+                        try:
+                            confluence.add_attachment(
+                                page['id'], attachment.filename, data, attachment.description)
+                        except Timeout:
+                            log.warn('Timed out. Retrying...')
+                        else:
+                            retry = False
+            except Exception as e:
+                msg = 'Uncaught exception during import of %s! Page not imported!'
+                log.error(msg % wiki_page.title)
+                log.error(e)
+                STATS[space]['failed import'].append(wiki_page.title)
 
         # organize pages hierarchically
         for title, created_page in created_pages.iteritems():
             if created_page.get('parent') not in [None, 'Wiki']:
                 log.info(u'Moving "{0}" beneath "{1}"'.format(
                     title, created_page['parent']))
-                confluence.move_page(created_page['id'],
-                                     created_pages[created_page['parent']]['id'])
+                try:
+                    confluence.move_page(
+                        created_page['id'],
+                        created_pages[created_page['parent']]['id'])
+                except Exception as e:
+                    msg = 'Uncaught exception during hierarchical move of %s!'
+                    log.error(msg % wiki_page.title)
+                    log.error(e)
+                    STATS[space]['failed hierarchical move'].append(
+                        wiki_page.title)
 
 
 if __name__ == '__main__':
