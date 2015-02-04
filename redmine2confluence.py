@@ -110,13 +110,6 @@ def process(redmine, wiki_page, nuclear=False):
     }
 
 
-def get_total_count(project_id):
-    """Workaround for bug in python-redmine"""
-    url = '%s/projects/%s/wiki/index.json?key=%s'
-    r = requests.get(url % (REDMINE['url'], project_id, REDMINE['key'])).json()
-    return len(r['wiki_pages'])
-
-
 def add_page(wiki_page, space):
     """Adds page to confluence"""
     processed = process(redmine, wiki_page)
@@ -162,7 +155,7 @@ def main():
         confluence.create_space(space, project.name, project.description)
 
         # create pages
-        for wiki_page in project.wiki_pages[:get_total_count(proj_name)]:
+        for wiki_page in project.wiki_pages:
             try:
                 log.info(u"Importing: {0}".format(wiki_page.title))
                 page = add_page(wiki_page, space)
