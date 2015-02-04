@@ -59,15 +59,28 @@ class XMLFixer(HTMLParser):
                     html = html.replace(match, fixed)
         return html
 
+
 def convert_textile(body):
+    """Convert textile using pandoc and python-textile.
+    If the number of tables in the two doesn't match, go through the pandoc
+    version and replace unconverted tables with their equivalents from
+    python-textile.
+    Otherwise, just return the pandoc version untouched.
+    """
     pandoc_conv = pypandoc.convert(body, 'html', format='textile')
     pandoc_soup = BeautifulSoup(pandoc_conv)
     textile_conv = textile.textile(body)
     textile_soup = BeautifulSoup(textile_conv)
     if len(pandoc_soup.find_all('table')) != len(textile_soup.find_all('table')):
-        raise Exception()
+        retval = u''
+        for line in pandoc_conv.split('\n'):
+            if line.startswith('<p>|'):
+                retval += textile.textile(line[3:-4].replace('<br />', '\n'))
+            else:
+                retval += line
     else:
-        return pandoc_conv
+        retval = pandoc_conv
+    return retval
 
 
 
