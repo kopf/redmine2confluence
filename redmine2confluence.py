@@ -132,9 +132,7 @@ def fix_img_tags(page_id):
     changed = False
     for img in soup.find_all('img'):
         if '/' not in img['src']:
-            img['src'] = '%s/download/attachments/%s/%s' % (
-                CONFLUENCE['website_url'], page_id, img['src']
-            )
+            img['src'] = '/download/attachments/%s/%s' % (page_id, img['src'])
             changed = True
     if changed:
         confluence.update_page(page_id, unicode(soup))
