@@ -20,9 +20,8 @@ confluence = Confluence(CONFLUENCE['url'], CONFLUENCE['username'],
 redmine = Redmine(REDMINE['url'], key=REDMINE['key'])
 STATS = {}
 REPLACEMENTS = {
-    '{{>toc}}', ('{toc:printable=true|style=square|maxLevel=2|indent=5px'
-                 '|minLevel=2|class=bigpink|exclude=[1//2]|type=list'
-                 '|outline=true|include=.*}')
+    '{{>toc}}': '{toc}',
+    '{{child_pages}}': '{children}'
 }
 
 
@@ -60,6 +59,17 @@ class XMLFixer(HTMLParser):
                     html = html.replace(match, fixed)
         return html
 
+def convert_textile(body):
+    pandoc_conv = pypandoc.convert(body, 'html', format='textile')
+    pandoc_soup = BeautifulSoup(pandoc_conv)
+    textile_conv = textile.textile(body)
+    textile_soup = BeautifulSoup(textile_conv)
+    if len(pandoc_soup.find_all('table')) != len(textile_soup.find_all('table')):
+        raise Exception()
+    else:
+        return pandoc_conv
+
+
 
 def process(redmine, wiki_page, nuclear=False):
     """Processes a wiki page, getting all metadata and reformatting body"""
@@ -84,13 +94,7 @@ def process(redmine, wiki_page, nuclear=False):
         # strip extra repeated title from within body text
         body = body[len('h1. %s' % title):]
 
-    # convert textile
-    converted = pypandoc.convert(body, 'html', format='textile')
-    if '|&gt;.' in converted:
-        # pypandoc doesn't handle textile table alignments properly
-        body = textile.textile(body)
-    else:
-        body = converted
+    body = convert_textile(body)
 
     if not nuclear:
         xml_fixer = XMLFixer()
