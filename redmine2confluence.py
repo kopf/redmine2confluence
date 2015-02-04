@@ -83,7 +83,6 @@ def convert_textile(body):
     return retval
 
 
-
 def process(redmine, wiki_page, nuclear=False):
     """Processes a wiki page, getting all metadata and reformatting body"""
     # Get again, to get attachments:
@@ -92,8 +91,6 @@ def process(redmine, wiki_page, nuclear=False):
     title = wiki_page.title.replace('_', ' ')
     # process body
     body = wiki_page.text
-    for search, replace in REPLACEMENTS.iteritems():
-        body = body.replace(search, replace)
     if nuclear:
         ## HTMLEncode ALL tags
         body = body.replace('<', '&lt;')
@@ -115,6 +112,10 @@ def process(redmine, wiki_page, nuclear=False):
     else:
         # Use beautifulsoup to clean up stuff like <p><pre>xyz</p></pre>
         body = unicode(BeautifulSoup(body))
+
+    # Replace macros. Not yet working.
+    for search, replace in REPLACEMENTS.iteritems():
+        body = body.replace(search, replace).replace('<p>%s</p>' % replace, replace)
     return {
         'title': title,
         'body': body,
