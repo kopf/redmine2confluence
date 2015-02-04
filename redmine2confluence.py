@@ -19,6 +19,11 @@ confluence = Confluence(CONFLUENCE['url'], CONFLUENCE['username'],
                         CONFLUENCE['password'])
 redmine = Redmine(REDMINE['url'], key=REDMINE['key'])
 STATS = {}
+REPLACEMENTS = {
+    '{{>toc}}', ('{toc:printable=true|style=square|maxLevel=2|indent=5px'
+                 '|minLevel=2|class=bigpink|exclude=[1//2]|type=list'
+                 '|outline=true|include=.*}')
+}
 
 
 class XMLFixer(HTMLParser):
@@ -64,6 +69,8 @@ def process(redmine, wiki_page, nuclear=False):
     title = wiki_page.title.replace('_', ' ')
     # process body
     body = wiki_page.text
+    for search, replace in REPLACEMENTS.iteritems():
+        body = body.replace(search, replace)
     if nuclear:
         ## HTMLEncode ALL tags
         body = body.replace('<', '&lt;')
