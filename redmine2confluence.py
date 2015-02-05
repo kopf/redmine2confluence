@@ -80,7 +80,7 @@ def convert_textile(body):
 
 def convert_links(body, space):
     """Make links clickable, convert links from old formats to new"""
-    link_template = ' <a href="%s">%s</a>'
+    link_template = '<a href="%s">%s</a>'
     retval = []
     process = True
     for line in body.split('\n'):
@@ -92,15 +92,16 @@ def convert_links(body, space):
             url_regex = ('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|'
                          '(?:%[0-9a-fA-F][0-9a-fA-F]))+')
             for url in set(re.findall(url_regex, line)):
-                line = re.sub('\s%s' % re.escape(url), link_template % (url, url), line)
+                line = re.sub('^%s' % re.escape(url), link_template % (url, url), line)
+                line = re.sub('\s%s' % re.escape(url), u' '+link_template % (url, url), line)
             # Convert issue #s
             replacement = (' <a href="{0}/issues/?jql=%22External%20Issue%20ID%22%20~%20'
                            '\g<1>">\g<1></a>'.format(JIRA_URL))
             line = re.sub('\s#([0-9]+)', replacement, line)
             # Convert [[Article Name]] and [[Article Name|Some link text here]]
-            regex = re.compile('\s+(\[\[((?P<page_title>[^]]+?)(\|))?'
+            regex = re.compile('(^|\s+)(\[\[((?P<page_title>[^]]+?)(\|))?'
                                '(?P<display_text>.+?)\]\])')
-            matches = set([(match[0], match[2], match[4]) for match in regex.findall(line)])
+            matches = set([(match[1], match[3], match[5]) for match in regex.findall(line)])
             for match in matches:
                 link_text = match[2]
                 target_page = (match[1] or match[2])
@@ -110,7 +111,7 @@ def convert_links(body, space):
                     target_page = target_page.replace(' ', '+').replace('_', '+')
                     url = '/display/%s/%s' % (space, target_page)
                 line = line.replace(match[0], link_template % (url, link_text))
-        if '</code>' in line or '</pre>' in line or '</notextile> in line':
+        if '</code>' in line or '</pre>' in line or '</notextile>' in line:
             process = True
         retval.append(line)
     return u'\n'.join(retval)
