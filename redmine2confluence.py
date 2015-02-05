@@ -18,10 +18,6 @@ confluence = Confluence(CONFLUENCE['url'], CONFLUENCE['username'],
                         CONFLUENCE['password'])
 redmine = Redmine(REDMINE['url'], key=REDMINE['key'])
 STATS = {}
-REPLACEMENTS = {
-    '{{>toc}}': '{toc}',
-    '{{child_pages}}': '{children}'
-}
 
 
 class XMLFixer(HTMLParser):
