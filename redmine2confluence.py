@@ -11,8 +11,7 @@ import pypandoc
 import textile
 
 from confluence import Confluence, Timeout, InvalidXML
-from convert import urls_to_confluence
-from settings import REDMINE, CONFLUENCE, PROJECTS
+from settings import REDMINE, CONFLUENCE, PROJECTS, JIRA_URL
 
 log = logbook.Logger('redmine2confluence')
 confluence = Confluence(CONFLUENCE['url'], CONFLUENCE['username'],
@@ -83,6 +82,22 @@ def convert_textile(body):
     return retval
 
 
+def convert_links(body):
+    """Convert http://xyz.com to clickable link.
+    Convert '#472' to correct JIRA link.
+    """
+    # Make links clickable
+    url_regex = ('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|'
+                 '(?:%[0-9a-fA-F][0-9a-fA-F]))+')
+    for url in set(re.findall(url_regex, body)):
+        body = re.sub('\s%s' % re.escape(url), ' <a href="%s">%s</a>' % (url, url), body)
+    # Convert issue #s
+    replacement = ('<a href="{0}/issues/?jql=%22External%20Issue%20ID%22%20~%20'
+                   '\g<1>">\g<1></a>'.format(JIRA_URL))
+    body = re.sub('\s#([0-9]+)', replacement, body)
+    return body
+
+
 def process(redmine, wiki_page, nuclear=False):
     """Processes a wiki page, getting all metadata and reformatting body"""
     # Get again, to get attachments:
@@ -98,8 +113,9 @@ def process(redmine, wiki_page, nuclear=False):
         body = body.replace('&lt;code>', '<code>').replace('&lt;/code>', '</code>')
         body = body.replace('&lt;notextile>', '<notextile>').replace('&lt;/notextile>', '</notextile>')
         body = body.replace('&lt;pre>', '<pre>').replace('&lt;/pre>', '</pre>')
-    # translate links
-    body = urls_to_confluence(body)
+
+    body = convert_links(body)
+
     if body.startswith('h1. %s' % title):
         # strip extra repeated title from within body text
         body = body[len('h1. %s' % title):]
@@ -113,9 +129,6 @@ def process(redmine, wiki_page, nuclear=False):
         # Use beautifulsoup to clean up stuff like <p><pre>xyz</p></pre>
         body = unicode(BeautifulSoup(body))
 
-    # Replace macros. Not yet working.
-    for search, replace in REPLACEMENTS.iteritems():
-        body = body.replace(search, replace).replace('<p>%s</p>' % replace, replace)
     return {
         'title': title,
         'body': body,
