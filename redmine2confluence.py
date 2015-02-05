@@ -88,6 +88,17 @@ def convert_links(body, space):
         if '<code>' in line or '<pre>' in line or '<notextile>' in line:
             process = False
         if process:
+            # Convert wiki url links
+            wiki_link = ('(http[s]?://(trondheim|redmine)[.phi-tps.local]?/'
+                         'redmine/projects/(.*)?/wiki/(.*)?[/]?)')
+            for match in set(re.findall(wiki_link, line)):
+                url = match[0]
+                page_space = match[2]
+                page_title = match[3].strip('/').replace('_', '+').replace('_', '+')
+                new_url = '%s/display/%s/%s' % (
+                    CONFLUENCE['url'], page_space, page_title)
+                line.replace(url, new_url)
+
             # Make links clickable
             url_regex = ('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|'
                          '(?:%[0-9a-fA-F][0-9a-fA-F]))+')

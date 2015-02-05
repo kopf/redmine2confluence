@@ -1,6 +1,7 @@
 import unittest
 
 from redmine2confluence import convert_links
+from settings import CONFLUENCE, PROJECTS
 
 
 class TestLinkConversion(unittest.TestCase):
@@ -79,3 +80,14 @@ class TestLinkConversion(unittest.TestCase):
         text = '<code>[[http://google.com/bla_bla]]</code>\n\n<code>\n[[Article_name]]\n</code>'
         self.assertEqual(convert_links(text, self.space), text)
 
+    def test_redmine_links_translation(self):
+        """Should re-write hard-coded redmine links to point to Confluence pages"""
+        text = ('http://trondheim/redmine/projects/nbrsf/wiki/API_Integration_Test/'
+                'http://redmine/redmine/projects/nbrsf/wiki/API_Integration_Test'
+                'http://trondheim.phi-tps.local/redmine/projects/nbrsf/wiki/API_Integration_Test/'
+                'http://redmine.phi-tps.local/redmine/projects/nbrsf/wiki/API_Integration_Test')
+
+        url = '%s/display/%s/%s' % (CONFLUENCE['url'], PROJECTS['nbrsf'], 'API+Integration+Test')
+        html = '<a href="%s">%s</a>' % (url, url)
+        expected = '\n'.join([html for _ in range(4)])
+        self.assertTrue(convert_links(text, 'nbrsf'), expected)
