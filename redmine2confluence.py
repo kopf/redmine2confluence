@@ -87,7 +87,7 @@ def convert_links(body, space):
     for url in set(re.findall(url_regex, body)):
         body = re.sub('\s%s' % re.escape(url), link_template % (url, url), body)
     # Convert issue #s
-    replacement = ('<a href="{0}/issues/?jql=%22External%20Issue%20ID%22%20~%20'
+    replacement = (' <a href="{0}/issues/?jql=%22External%20Issue%20ID%22%20~%20'
                    '\g<1>">\g<1></a>'.format(JIRA_URL))
     body = re.sub('\s#([0-9]+)', replacement, body)
     # Convert [[Article Name]] and [[Article Name|Some link text here]]
