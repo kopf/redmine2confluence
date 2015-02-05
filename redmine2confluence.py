@@ -215,15 +215,8 @@ def main():
                     data = requests.get(
                         u'{0}?key={1}'.format(attachment.content_url, REDMINE['key']),
                         stream=True).raw.read()
-                    retry = True
-                    while retry:
-                        try:
-                            confluence.add_attachment(
-                                page['id'], attachment.filename, data, attachment.description)
-                        except Timeout:
-                            log.warn('Timed out. Retrying...')
-                        else:
-                            retry = False
+                    confluence.add_attachment(
+                        page['id'], attachment.filename, data, attachment.description)
                 if wiki_page.attachments:
                     fix_img_tags(page['id'])
             except Exception as e:

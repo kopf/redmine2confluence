@@ -1,5 +1,6 @@
 import json
 import xmlrpclib
+import time
 
 import logbook
 import requests
@@ -23,7 +24,9 @@ class Confluence(object):
         self.server = xmlrpclib.ServerProxy('http://localhost:8090/rpc/xmlrpc')
         self.token = self.server.confluence2.login(self.username, self.password)
 
-    def _post(self, url, data, files=None, headers=None, jsonify=True):
+    def _post(self, url, data, files=None, headers=None, jsonify=True, retry=5):
+        if not retry:
+            raise RuntimeError('Number of retries exceeded! Aborting.')
         if headers is None:
             headers = self.headers
         if jsonify:
@@ -34,17 +37,23 @@ class Confluence(object):
         except (requests.exceptions.ConnectionError,
                 requests.exceptions.Timeout) as e:
             log.warn('Exception occurred making request: {0}. Retrying...'.format(e))
-            return self._post(url, data, files=files, headers=headers, jsonify=jsonify)
+            time.sleep(1)
+            return self._post(url, data, files=files, headers=headers,
+                              jsonify=jsonify, retry=retry-1)
         if not 200 <= res.status_code < 300:
             error = json.loads(res.text)
             if error['message'] == 'Error parsing xhtml':
                 raise InvalidXML(error['message'])
             elif 'Read timed out' in error['message']:
-                raise Timeout(error['message'])
+                log.warn('Timed out. Retrying...')
+                time.sleep(1)
+                return self._post(url, data, files=files, headers=headers,
+                                  jsonify=jsonify, retry=retry-1)
             elif 'same file name as an existing attachment' in error['message']:
                 # Append an underscore to the filename, before extension
                 files['file'] = (files['file'][0].replace('.', '_.'), files['file'][1])
-                return self._post(url, data, files=files, headers=headers, jsonify=jsonify)
+                return self._post(url, data, files=files, headers=headers,
+                                  jsonify=jsonify, retry=retry)
             raise RuntimeError(res.text)
         return res.json()
 
