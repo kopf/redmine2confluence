@@ -67,3 +67,8 @@ class TestLinkConversion(unittest.TestCase):
         expected = '  <a href="http://google.com/bla_bla">http://google.com/bla_bla</a>'
         self.assertEqual(convert_links(text, self.space), expected)
 
+    def test_text_within_code_tags_ignored(self):
+        """Should not manipulate any text between <code> tags"""
+        text = '<code> [[http://google.com/bla_bla]]</code>\n\n<code>\n[[Article_name]]\n</code>'
+        self.assertEqual(convert_links(text, self.space), text)
+
