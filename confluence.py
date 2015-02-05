@@ -17,7 +17,7 @@ class Timeout(Exception):
 
 class Confluence(object):
     def __init__(self, base_url, username, password):
-        self.base_url = base_url
+        self.base_url = base_url + '/rest/api'
         self.username = username
         self.password = password
         self.headers = {'Content-type': 'application/json'}
