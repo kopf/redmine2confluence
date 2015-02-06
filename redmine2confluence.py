@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from HTMLParser import HTMLParser
 import re
 import traceback
