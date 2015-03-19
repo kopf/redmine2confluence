@@ -74,7 +74,11 @@ class Confluence(object):
                 }
             }
         }
-        return self._post('{0}/space'.format(self.base_url), data)
+        try:
+            self._post('{0}/space'.format(self.base_url), data)
+        except RuntimeError as e:
+            # space already exists
+            log.warn('Space {0} already exists, skipping creation'.format(key))
 
     def create_page(self, title, body, space, username, display_name, parent_id=None):
         data = {
