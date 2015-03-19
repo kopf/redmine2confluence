@@ -21,6 +21,8 @@ class Confluence(object):
         self.username = username
         self.password = password
         self.verify_ssl = verify_ssl
+        if not verify_ssl:
+            requests.packages.urllib3.disable_warnings()
         self.headers = {'Content-type': 'application/json'}
         self.server = xmlrpclib.ServerProxy('%s/rpc/xmlrpc' % base_url)
         self.token = self.server.confluence2.login(self.username, self.password)
