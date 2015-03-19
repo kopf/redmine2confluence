@@ -21,7 +21,7 @@ class Confluence(object):
         self.username = username
         self.password = password
         self.headers = {'Content-type': 'application/json'}
-        self.server = xmlrpclib.ServerProxy('http://localhost:8090/rpc/xmlrpc')
+        self.server = xmlrpclib.ServerProxy('%s/rpc/xmlrpc' % base_url)
         self.token = self.server.confluence2.login(self.username, self.password)
 
     def _post(self, url, data, files=None, headers=None, jsonify=True, retry=5):
