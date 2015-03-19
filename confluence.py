@@ -45,7 +45,10 @@ class Confluence(object):
             return self._post(url, data, files=files, headers=headers,
                               jsonify=jsonify, retry=retry-1)
         if not 200 <= res.status_code < 300:
-            error = json.loads(res.text)
+            try:
+                error = json.loads(res.text)
+            except ValueError:
+                raise RuntimeError('Could not parse json: %s' % res.text)
             if error['message'] == 'Error parsing xhtml':
                 raise InvalidXML(error['message'])
             elif 'Read timed out' in error['message']:
