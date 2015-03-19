@@ -16,10 +16,11 @@ class Timeout(Exception):
 
 
 class Confluence(object):
-    def __init__(self, base_url, username, password):
+    def __init__(self, base_url, username, password, verify_ssl=True):
         self.base_url = base_url + '/rest/api'
         self.username = username
         self.password = password
+        self.verify_ssl = verify_ssl
         self.headers = {'Content-type': 'application/json'}
         self.server = xmlrpclib.ServerProxy('%s/rpc/xmlrpc' % base_url)
         self.token = self.server.confluence2.login(self.username, self.password)
@@ -33,7 +34,8 @@ class Confluence(object):
             data = json.dumps(data)
         try:
             res = requests.post(url, auth=(self.username, self.password),
-                                data=data, headers=headers, files=files)
+                                data=data, headers=headers, files=files,
+                                verify=self.verify_ssl)
         except (requests.exceptions.ConnectionError,
                 requests.exceptions.Timeout) as e:
             log.warn('Exception occurred making request: {0}. Retrying...'.format(e))
@@ -105,8 +107,11 @@ class Confluence(object):
             self.token, str(page_id), str(target_page_id), 'append')
 
     def get_page(self, page_id):
-        return requests.get('{0}/content/{1}?expand=body.view,version'.format(self.base_url, page_id),
-                            auth=(self.username, self.password), headers=self.headers).json()
+        url = '{0}/content/{1}?expand=body.view,version'.format(
+            self.base_url, page_id)
+        return requests.get(
+            url, auth=(self.username, self.password), headers=self.headers,
+            verify=self.verify_ssl).json()
 
     def update_page(self, page_id, content):
         current_page = self.get_page(page_id)
@@ -128,4 +133,5 @@ class Confluence(object):
         }
         return requests.put('{0}/content/{1}'.format(self.base_url, page_id),
                             auth=(self.username, self.password),
-                            headers=self.headers, data=json.dumps(data)).json()
+                            headers=self.headers, data=json.dumps(data),
+                            verify=self.verify_ssl).json()

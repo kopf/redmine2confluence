@@ -13,11 +13,11 @@ import pypandoc
 import textile
 
 from confluence import Confluence, Timeout, InvalidXML
-from settings import REDMINE, CONFLUENCE, PROJECTS, JIRA_URL
+from settings import REDMINE, CONFLUENCE, PROJECTS, JIRA_URL, VERIFY_SSL
 
 log = logbook.Logger('redmine2confluence')
 confluence = Confluence(CONFLUENCE['url'], CONFLUENCE['username'],
-                        CONFLUENCE['password'])
+                        CONFLUENCE['password'], verify_ssl=VERIFY_SSL)
 redmine = Redmine(REDMINE['url'], key=REDMINE['key'])
 STATS = {}
 
