@@ -1,6 +1,7 @@
 import json
 import xmlrpclib
 import time
+import urllib
 
 import logbook
 import requests
@@ -104,6 +105,7 @@ class Confluence(object):
         return self._post('{0}/content'.format(self.base_url), data)
 
     def add_attachment(self, confluence_id, filename, data, description):
+        filename = urllib.quote_plus(filename)
         url = '{0}/content/{1}/child/attachment'.format(
             self.base_url, confluence_id)
         return self._post(url, {'comment': description},
