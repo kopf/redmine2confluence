@@ -184,12 +184,9 @@ def add_page(wiki_page, space):
         log.warn('Invalid XML generated. Going for the nuclear option...')
         STATS[space]['nuclear'].append(wiki_page.title)
         processed = process(redmine, wiki_page, space, nuclear=True)
-        try:
-            page = confluence.create_page(
-                processed['title'], processed['body'], space,
-                processed['username'], processed['display_name'])
-        except InvalidXML:
-            import pudb;pudb.set_trace()
+        page = confluence.create_page(
+            processed['title'], processed['body'], space,
+            processed['username'], processed['display_name'])
     return page
 
 
