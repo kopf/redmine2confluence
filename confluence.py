@@ -105,7 +105,7 @@ class Confluence(object):
         return self._post('{0}/content'.format(self.base_url), data)
 
     def add_attachment(self, confluence_id, filename, data, description):
-        filename = urllib.quote_plus(filename)
+        filename = urllib.quote_plus(filename.encode('utf8'))
         url = '{0}/content/{1}/child/attachment'.format(
             self.base_url, confluence_id)
         return self._post(url, {'comment': description},
