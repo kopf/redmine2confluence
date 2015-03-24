@@ -8,7 +8,7 @@ import urllib
 from bs4 import BeautifulSoup
 import logbook
 from redmine import Redmine
-from redmine.exceptions import ResourceAttrError
+from redmine.exceptions import ResourceAttrError, ResourceNotFoundError
 import requests
 import pypandoc
 import textile
@@ -21,6 +21,7 @@ confluence = Confluence(CONFLUENCE['url'], CONFLUENCE['username'],
                         CONFLUENCE['password'], verify_ssl=VERIFY_SSL)
 redmine = Redmine(REDMINE['url'], key=REDMINE['key'])
 STATS = {}
+SKIPPED_PROJECTS = []
 
 
 class XMLFixer(HTMLParser):
@@ -212,9 +213,15 @@ def main():
             'failed hierarchical move': []
         }
         created_pages = {}
-        log.info(u"Importing project {0} into space {1}".format(
-            proj_name, space))
         project = redmine.project.get(proj_name)
+        try:
+            log.info(u"Importing project {0} into space {1} ({2} pages)".format(
+                proj_name, space, len(project.wiki_pages)))
+        except ResourceNotFoundError:
+            log.error(u"Wiki for project {0} not found. Skipping!".format(
+                proj_name))
+            SKIPPED_PROJECTS.append(proj_name)
+            continue
         confluence.create_space(space, project.name, project.description)
 
         # create pages
@@ -265,6 +272,11 @@ if __name__ == '__main__':
     log.info('====================')
     log.info('Statistics:')
     log.info('====================')
+    if SKIPPED_PROJECTS:
+        log.info('Skipped projects:')
+        for proj_name in SKIPPED_PROJECTS:
+            log.info(proj_name)
+        log.info('====================')
     for space in STATS:
         for key in STATS[space]:
             log.info('%s:' % key)
