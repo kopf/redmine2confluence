@@ -206,66 +206,67 @@ def fix_img_tags(page_id):
 
 
 def main():
-    for proj_name, space in PROJECTS.iteritems():
-        STATS[space] = {
-            'nuclear': [],
-            'failed import': [],
-            'failed hierarchical move': []
-        }
-        created_pages = {}
-        log.info(u"Importing project {0} into space {1}".format(
-            proj_name, space))
-        project = redmine.project.get(proj_name)
-        confluence.create_space(space, project.name, project.description)
+    try:
+        for proj_name, space in PROJECTS.iteritems():
+            STATS[space] = {
+                'nuclear': [],
+                'failed import': [],
+                'failed hierarchical move': []
+            }
+            created_pages = {}
+            log.info(u"Importing project {0} into space {1}".format(
+                proj_name, space))
+            project = redmine.project.get(proj_name)
+            confluence.create_space(space, project.name, project.description)
 
-        # create pages
-        for wiki_page in project.wiki_pages:
-            try:
-                log.info(u"Importing: {0}".format(wiki_page.title))
-                page = add_page(wiki_page, space)
+            # create pages
+            for wiki_page in project.wiki_pages:
                 try:
-                    parent = wiki_page.parent['title']
-                except ResourceAttrError:
-                    parent = None
-                created_pages[wiki_page.title] = {'id': page['id'], 'parent': parent}
-                for attachment in wiki_page.attachments:
-                    log.info(u'Adding attachment: {0} ({1} bytes)'.format(
-                        attachment.filename, attachment.filesize))
-                    data = requests.get(
-                        u'{0}?key={1}'.format(attachment.content_url, REDMINE['key']),
-                        stream=True).raw.read()
-                    confluence.add_attachment(
-                        page['id'], attachment.filename, data, attachment.description)
-                if wiki_page.attachments:
-                    fix_img_tags(page['id'])
-            except Exception as e:
-                msg = 'Uncaught exception during import of %s! Page not imported!'
-                log.error(msg % wiki_page.title)
-                traceback.print_exc()
-                STATS[space]['failed import'].append(wiki_page.title)
-
-        # organize pages hierarchically
-        for title, created_page in created_pages.iteritems():
-            if created_page.get('parent') not in [None, 'Wiki']:
-                log.info(u'Moving "{0}" beneath "{1}"'.format(
-                    title, created_page['parent']))
-                try:
-                    confluence.move_page(
-                        created_page['id'],
-                        created_pages[created_page['parent']]['id'])
+                    log.info(u"Importing: {0}".format(wiki_page.title))
+                    page = add_page(wiki_page, space)
+                    try:
+                        parent = wiki_page.parent['title']
+                    except ResourceAttrError:
+                        parent = None
+                    created_pages[wiki_page.title] = {'id': page['id'], 'parent': parent}
+                    for attachment in wiki_page.attachments:
+                        log.info(u'Adding attachment: {0} ({1} bytes)'.format(
+                            attachment.filename, attachment.filesize))
+                        data = requests.get(
+                            u'{0}?key={1}'.format(attachment.content_url, REDMINE['key']),
+                            stream=True).raw.read()
+                        confluence.add_attachment(
+                            page['id'], attachment.filename, data, attachment.description)
+                    if wiki_page.attachments:
+                        fix_img_tags(page['id'])
                 except Exception as e:
-                    msg = 'Uncaught exception during hierarchical move of %s!'
+                    msg = 'Uncaught exception during import of %s! Page not imported!'
                     log.error(msg % wiki_page.title)
                     traceback.print_exc()
-                    STATS[space]['failed hierarchical move'].append(
-                        wiki_page.title)
+                    STATS[space]['failed import'].append(wiki_page.title)
+
+            # organize pages hierarchically
+            for title, created_page in created_pages.iteritems():
+                if created_page.get('parent') not in [None, 'Wiki']:
+                    log.info(u'Moving "{0}" beneath "{1}"'.format(
+                        title, created_page['parent']))
+                    try:
+                        confluence.move_page(
+                            created_page['id'],
+                            created_pages[created_page['parent']]['id'])
+                    except Exception as e:
+                        msg = 'Uncaught exception during hierarchical move of %s!'
+                        log.error(msg % wiki_page.title)
+                        traceback.print_exc()
+                        STATS[space]['failed hierarchical move'].append(
+                            wiki_page.title)
+    except Exception as e:
+        import pudb
+        pudb.set_trace()
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except Exception as e:
-        import pudb;pudb.set_trace()
+    main()
     log.info('====================')
     log.info('Statistics:')
     log.info('====================')
