@@ -3,6 +3,7 @@
 from HTMLParser import HTMLParser
 import re
 import traceback
+import urllib
 
 from bs4 import BeautifulSoup
 import logbook
@@ -196,7 +197,8 @@ def fix_img_tags(page_id):
     changed = False
     for img in soup.find_all('img'):
         if '/' not in img['src']:
-            img['src'] = '/download/attachments/%s/%s' % (page_id, img['src'])
+            img['src'] = '/download/attachments/%s/%s' % (
+                page_id, urllib.quote_plus(img['src'].encode('utf8')))
             changed = True
     if changed:
         confluence.update_page(page_id, unicode(soup))
