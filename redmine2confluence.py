@@ -213,7 +213,8 @@ def main():
             'failed hierarchical move': []
         }
         created_pages = {}
-        log.info(u"Creating space {0}".format(space))
+        log.info(u"Importing project {0} into space {1}".format(
+            proj_name, space))
         project = redmine.project.get(proj_name)
         confluence.create_space(space, project.name, project.description)
 
