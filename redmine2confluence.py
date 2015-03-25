@@ -213,8 +213,8 @@ def main():
             'failed hierarchical move': []
         }
         created_pages = {}
-        project = redmine.project.get(proj_name)
         try:
+            project = redmine.project.get(proj_name)
             log.info(u"Importing project {0} into space {1} ({2} pages)".format(
                 proj_name, space, len(project.wiki_pages)))
         except ResourceNotFoundError:
