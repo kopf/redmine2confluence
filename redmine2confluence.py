@@ -278,8 +278,11 @@ if __name__ == '__main__':
             log.info(proj_name)
         log.info('====================')
     for space in STATS:
-        for key in STATS[space]:
-            log.info('%s:' % key)
-            for title in STATS[space][key]:
-                log.info('    %s' % title)
+        log.info('Space: %s' % space)
+        log.info('====================')
+        for category, page_names in STATS[space].iteritems():
+            if page_names:
+                log.info('%s:' % category)
+                for title in page_names:
+                    log.info('    %s' % title)
         log.info('====================')
