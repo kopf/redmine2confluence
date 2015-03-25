@@ -8,7 +8,7 @@ import urllib
 from bs4 import BeautifulSoup
 import logbook
 from redmine import Redmine
-from redmine.exceptions import ResourceAttrError, ResourceNotFoundError
+from redmine.exceptions import BaseRedmineError, ResourceAttrError
 import requests
 import pypandoc
 import textile
@@ -217,9 +217,9 @@ def main():
             project = redmine.project.get(proj_name)
             log.info(u"Importing project {0} into space {1} ({2} pages)".format(
                 proj_name, space, len(project.wiki_pages)))
-        except ResourceNotFoundError:
-            log.error(u"Wiki for project {0} not found. Skipping!".format(
-                proj_name))
+        except BaseRedmineError as e:
+            log.error(u"Redmine error accessing project {0}: '{1}' Skipping!".format(
+                proj_name, e.message))
             SKIPPED_PROJECTS.append(proj_name)
             continue
         confluence.create_space(space, project.name, project.description)
