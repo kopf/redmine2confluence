@@ -1,6 +1,6 @@
 logbook
 requests
-python-redmine>=1.0.3
+python-redmine>=1.1.1
 BeautifulSoup4
 textile
 pypandoc
