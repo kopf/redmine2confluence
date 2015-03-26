@@ -136,12 +136,13 @@ def convert_links(body, space):
     return u'\n'.join(retval)
 
 
-def process(redmine, wiki_page, space, nuclear=False):
+def process(wiki_page, space, nuclear=False, override_title=None):
     """Processes a wiki page, getting all metadata and reformatting body"""
     # Get again, to get attachments:
     wiki_page = wiki_page.refresh(include='attachments')
     # process title
-    title = wiki_page.title.replace('_', ' ')
+    title = override_title or wiki_page.title
+    title = title.replace('_', ' ')
     # process body
     body = wiki_page.text
     if nuclear:
@@ -175,9 +176,9 @@ def process(redmine, wiki_page, space, nuclear=False):
     }
 
 
-def add_page(wiki_page, proj_name, space):
+def add_page(wiki_page, proj_name, space, override_title=None):
     """Adds page to confluence"""
-    processed = process(redmine, wiki_page, space)
+    processed = process(wiki_page, space, override_title=override_title)
     try:
         page = confluence.create_page(
             processed['title'], processed['body'], space,
@@ -185,7 +186,8 @@ def add_page(wiki_page, proj_name, space):
     except InvalidXML:
         log.warn('Invalid XML generated. Going for the nuclear option...')
         STATS[proj_name]['nuclear'].append(wiki_page.title)
-        processed = process(redmine, wiki_page, space, nuclear=True)
+        processed = process(
+            wiki_page, space, nuclear=True, override_title=override_title)
         page = confluence.create_page(
             processed['title'], processed['body'], space,
             processed['username'], processed['display_name'])
@@ -229,18 +231,23 @@ def main():
         for wiki_page in project.wiki_pages:
             try:
                 log.info(u"Importing: {0}".format(wiki_page.title))
+                new_title = None
                 try:
                     page = add_page(wiki_page, proj_name, space)
                 except DuplicateWikiPage:
-                    new_title = '%s_%s' % (proj_name, wiki_page.title)
+                    new_title = '%s_-_%s' % (proj_name, wiki_page.title)
                     STATS[proj_name]['renamed'][wiki_page.title] = new_title
-                    wiki_page.title = new_title
-                    page = add_page(wiki_page, proj_name, space)
+                    page = add_page(
+                        wiki_page, proj_name, space, override_title=new_title)
+
                 try:
                     parent = wiki_page.parent['title']
                 except ResourceAttrError:
                     parent = None
-                created_pages[wiki_page.title] = {'id': page['id'], 'parent': parent}
+                created_pages[new_title or wiki_page.title] = {
+                    'id': page['id'],
+                    'parent': parent
+                }
                 for attachment in wiki_page.attachments:
                     log.info(u'Adding attachment: {0} ({1} bytes)'.format(
                         attachment.filename, attachment.filesize))
@@ -262,6 +269,8 @@ def main():
             if created_page.get('parent'):
                 parent = STATS[proj_name]['renamed'].get(created_page['parent'],
                                                          created_page['parent'])
+                if parent in [None, 'Wiki']:
+                    continue
                 log.info(u'Moving "{0}" beneath "{1}"'.format(title, parent))
                 try:
                     confluence.move_page(created_page['id'],
