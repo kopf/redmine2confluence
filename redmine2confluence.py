@@ -175,7 +175,7 @@ def process(redmine, wiki_page, space, nuclear=False):
     }
 
 
-def add_page(wiki_page, space):
+def add_page(wiki_page, proj_name, space):
     """Adds page to confluence"""
     processed = process(redmine, wiki_page, space)
     try:
@@ -184,7 +184,7 @@ def add_page(wiki_page, space):
             processed['username'], processed['display_name'])
     except InvalidXML:
         log.warn('Invalid XML generated. Going for the nuclear option...')
-        STATS[space]['nuclear'].append(wiki_page.title)
+        STATS[proj_name]['nuclear'].append(wiki_page.title)
         processed = process(redmine, wiki_page, space, nuclear=True)
         page = confluence.create_page(
             processed['title'], processed['body'], space,
@@ -230,12 +230,12 @@ def main():
             try:
                 log.info(u"Importing: {0}".format(wiki_page.title))
                 try:
-                    page = add_page(wiki_page, space)
+                    page = add_page(wiki_page, proj_name, space)
                 except DuplicateWikiPage:
                     new_title = '%s_%s' % (proj_name, wiki_page.title)
                     STATS[proj_name]['renamed'][wiki_page.title] = new_title
                     wiki_page.title = new_title
-                    page = add_page(wiki_page, space)
+                    page = add_page(wiki_page, proj_name, space)
                 try:
                     parent = wiki_page.parent['title']
                 except ResourceAttrError:
@@ -255,7 +255,7 @@ def main():
                 msg = 'Uncaught exception during import of %s! Page not imported!'
                 log.error(msg % wiki_page.title)
                 traceback.print_exc()
-                STATS[space]['failed import'].append(wiki_page.title)
+                STATS[proj_name]['failed import'].append(wiki_page.title)
 
         # organize pages hierarchically
         for title, created_page in created_pages.iteritems():
@@ -270,7 +270,7 @@ def main():
                     msg = 'Uncaught exception during hierarchical move of %s!'
                     log.error(msg % title)
                     traceback.print_exc()
-                    STATS[space]['failed hierarchical move'].append(title)
+                    STATS[proj_name]['failed hierarchical move'].append(title)
 
 
 if __name__ == '__main__':
