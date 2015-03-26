@@ -16,6 +16,10 @@ class Timeout(Exception):
     pass
 
 
+class DuplicateWikiPage(Exception):
+    pass
+
+
 class Confluence(object):
     def __init__(self, base_url, username, password, verify_ssl=True):
         self.base_url = base_url + '/rest/api'
@@ -62,6 +66,8 @@ class Confluence(object):
                 files['file'] = (files['file'][0].replace('.', '_.'), files['file'][1])
                 return self._post(url, data, files=files, headers=headers,
                                   jsonify=jsonify, retry=retry)
+            elif 'A page with this title already exists' in error['message']:
+                raise DuplicateWikiPage()
             raise RuntimeError(res.text)
         return res.json()
 

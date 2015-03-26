@@ -13,7 +13,7 @@ import requests
 import pypandoc
 import textile
 
-from confluence import Confluence, Timeout, InvalidXML
+from confluence import Confluence, InvalidXML, DuplicateWikiPage
 from settings import REDMINE, CONFLUENCE, PROJECTS, JIRA_URL, VERIFY_SSL
 
 log = logbook.Logger('redmine2confluence')
@@ -207,10 +207,11 @@ def fix_img_tags(page_id):
 
 def main():
     for proj_name, space in PROJECTS.iteritems():
-        STATS[space] = {
+        STATS[proj_name] = {
             'nuclear': [],
             'failed import': [],
-            'failed hierarchical move': []
+            'failed hierarchical move': [],
+            'renamed': {}
         }
         created_pages = {}
         try:
@@ -228,7 +229,13 @@ def main():
         for wiki_page in project.wiki_pages:
             try:
                 log.info(u"Importing: {0}".format(wiki_page.title))
-                page = add_page(wiki_page, space)
+                try:
+                    page = add_page(wiki_page, space)
+                except DuplicateWikiPage:
+                    new_title = '%s_%s' % (proj_name, wiki_page.title)
+                    STATS[proj_name]['renamed'][wiki_page.title] = new_title
+                    wiki_page.title = new_title
+                    page = add_page(wiki_page, space)
                 try:
                     parent = wiki_page.parent['title']
                 except ResourceAttrError:
@@ -252,19 +259,18 @@ def main():
 
         # organize pages hierarchically
         for title, created_page in created_pages.iteritems():
-            if created_page.get('parent') not in [None, 'Wiki']:
-                log.info(u'Moving "{0}" beneath "{1}"'.format(
-                    title, created_page['parent']))
+            if created_page.get('parent'):
+                parent = STATS[proj_name]['renamed'].get(created_page['parent'],
+                                                         created_page['parent'])
+                log.info(u'Moving "{0}" beneath "{1}"'.format(title, parent))
                 try:
-                    confluence.move_page(
-                        created_page['id'],
-                        created_pages[created_page['parent']]['id'])
+                    confluence.move_page(created_page['id'],
+                                         created_pages[parent]['id'])
                 except Exception as e:
                     msg = 'Uncaught exception during hierarchical move of %s!'
-                    log.error(msg % wiki_page.title)
+                    log.error(msg % title)
                     traceback.print_exc()
-                    STATS[space]['failed hierarchical move'].append(
-                        wiki_page.title)
+                    STATS[space]['failed hierarchical move'].append(title)
 
 
 if __name__ == '__main__':
@@ -277,12 +283,15 @@ if __name__ == '__main__':
         for proj_name in SKIPPED_PROJECTS:
             log.info(proj_name)
         log.info('====================')
-    for space in STATS:
-        log.info('Space: %s' % space)
+    for proj_name in STATS:
+        log.info('Project: %s' % proj_name)
         log.info('====================')
-        for category, page_names in STATS[space].iteritems():
-            if page_names:
+        for category, page_names in STATS[proj_name].iteritems():
+            if category != 'renamed' and page_names:
                 log.info('%s:' % category)
                 for title in page_names:
                     log.info('    %s' % title)
+        log.info('Renamed Pages:')
+        for orig_title, new_title in STATS[proj_name]['renamed'].iteritems():
+            log.info('    %s ===> %s' % (orig_title, new_title))
         log.info('====================')
