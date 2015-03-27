@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from HTMLParser import HTMLParser
+import json
 import re
 import traceback
 import urllib
@@ -293,6 +294,12 @@ if __name__ == '__main__':
             log.info(proj_name)
         log.info('====================')
     for proj_name in STATS:
+        print_stats = False
+        for val in STATS[proj_name].values():
+            if val:
+                print_stats = True
+        if not print_stats:
+            continue
         log.info('Project: %s' % proj_name)
         log.info('====================')
         for category, page_names in STATS[proj_name].iteritems():
@@ -304,3 +311,5 @@ if __name__ == '__main__':
         for orig_title, new_title in STATS[proj_name]['renamed'].iteritems():
             log.info('    %s ===> %s' % (orig_title, new_title))
         log.info('====================')
+    with open('statistics.json', 'w') as f:
+        f.write(json.dumps(STATS, indent=4))
