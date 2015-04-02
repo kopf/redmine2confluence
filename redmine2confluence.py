@@ -128,7 +128,8 @@ def convert_links(body, space):
                 if target_page.startswith('http://') or target_page.startswith('https://'):
                     url = target_page
                 else:
-                    target_page = urllib.quote_plus(target_page.replace('_', ' '))
+                    target_page = urllib.quote_plus(
+                        target_page.replace('_', ' ').encode('utf8'))
                     url = '/display/%s/%s' % (space, target_page)
                 line = line.replace(match[0], link_template % (url, link_text))
         if '</code>' in line or '</pre>' in line or '</notextile>' in line:
