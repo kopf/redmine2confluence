@@ -119,7 +119,7 @@ def convert_links(body, space):
                            '\g<1>">\g<1></a>'.format(JIRA_URL))
             line = re.sub('\s#([0-9]+)', replacement, line)
             # Convert [[Article Name]] and [[Article Name|Some link text here]]
-            regex = re.compile('(^|\s+)(\[\[((?P<page_title>[^]]+?)(\|))?'
+            regex = re.compile('(^|\s+|\|)(\[\[((?P<page_title>[^]]+?)(\|))?'
                                '(?P<display_text>.+?)\]\])')
             matches = set([(match[1], match[3], match[5]) for match in regex.findall(line)])
             for match in matches:
