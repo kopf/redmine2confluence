@@ -129,7 +129,7 @@ def convert_links(body, space):
                     url = target_page
                 else:
                     target_page = urllib.quote_plus(
-                        target_page.replace('_', ' ').replace('/', '').encode('utf8'))
+                        target_page.replace('_', ' ').replace('/', '').replace('.', '').encode('utf8'))
                     url = '/display/%s/%s' % (space, target_page)
                 line = line.replace(match[0], link_template % (url, link_text))
         if '</code>' in line or '</pre>' in line or '</notextile>' in line:

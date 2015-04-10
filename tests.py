@@ -75,6 +75,12 @@ class TestLinkConversion(unittest.TestCase):
         expected = '<a href="/display/SPZ/Articlename">Article/name</a>'
         self.assertEqual(convert_links(text, self.space), expected)
 
+    def test_convert_wiki_link_dots(self):
+        """Should turn remove dots from URL when present in article title"""
+        text = '[[Article 3.2.10]]'
+        expected = '<a href="/display/SPZ/Article+3210">Article 3.2.10</a>'
+        self.assertEqual(convert_links(text, self.space), expected)
+
     def test_convert_wiki_link_of_url_with_underscores(self):
         """Should not manipulate underscores when present in url"""
         text = '[[http://google.com/bla_bla]]'
