@@ -69,6 +69,12 @@ class TestLinkConversion(unittest.TestCase):
         expected = '<a href="/display/SPZ/Article+name">Article_name</a>'
         self.assertEqual(convert_links(text, self.space), expected)
 
+    def test_convert_wiki_link_slashes(self):
+        """Should turn remove slashes from URL when present in article title"""
+        text = '[[Article/name]]'
+        expected = '<a href="/display/SPZ/Articlename">Article/name</a>'
+        self.assertEqual(convert_links(text, self.space), expected)
+
     def test_convert_wiki_link_of_url_with_underscores(self):
         """Should not manipulate underscores when present in url"""
         text = '[[http://google.com/bla_bla]]'
