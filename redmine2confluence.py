@@ -18,9 +18,6 @@ from confluence import Confluence, InvalidXML, DuplicateWikiPage
 from settings import REDMINE, CONFLUENCE, PROJECTS, JIRA_URL, VERIFY_SSL
 
 log = logbook.Logger('redmine2confluence')
-confluence = Confluence(CONFLUENCE['url'], CONFLUENCE['username'],
-                        CONFLUENCE['password'], verify_ssl=VERIFY_SSL)
-redmine = Redmine(REDMINE['url'], key=REDMINE['key'])
 STATS = {}
 SKIPPED_PROJECTS = []
 
@@ -119,9 +116,9 @@ def convert_links(body, space):
                            '\g<1>">\g<1></a>'.format(JIRA_URL))
             line = re.sub('\s#([0-9]+)', replacement, line)
             # Convert [[Article Name]] and [[Article Name|Some link text here]]
-            regex = re.compile('(^|\s+|\|)(\[\[((?P<page_title>[^]]+?)(\|))?'
+            regex = re.compile('(\[\[((?P<page_title>[^]]+?)(\|))?'
                                '(?P<display_text>.+?)\]\])')
-            matches = set([(match[1], match[3], match[5]) for match in regex.findall(line)])
+            matches = set([(match[0], match[2], match[4]) for match in regex.findall(line)])
             for match in matches:
                 link_text = match[2]
                 target_page = (match[1] or match[2])
@@ -285,6 +282,9 @@ def main():
 
 
 if __name__ == '__main__':
+    confluence = Confluence(CONFLUENCE['url'], CONFLUENCE['username'],
+                        CONFLUENCE['password'], verify_ssl=VERIFY_SSL)
+    redmine = Redmine(REDMINE['url'], key=REDMINE['key'])
     main()
     log.info('====================')
     log.info('Statistics:')

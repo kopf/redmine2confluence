@@ -51,6 +51,18 @@ class TestLinkConversion(unittest.TestCase):
         expected = '<a href="http://www.google.com">My favourite search</a>'
         self.assertEqual(convert_links(text, self.space), expected)
 
+    def test_convert_bold_wiki_link(self):
+        """Should convert bold wiki link into clickable link"""
+        text = '*[[ArticleName]]*'
+        expected = '*<a href="/display/SPZ/ArticleName">ArticleName</a>*'
+        self.assertEqual(convert_links(text, self.space), expected)
+
+    def test_convert_wiki_link_surrounded_by_text(self):
+        """Should convert wiki link surrounded by text into clickable link"""
+        text = 'text[[ArticleName]]here'
+        expected = 'text<a href="/display/SPZ/ArticleName">ArticleName</a>here'
+        self.assertEqual(convert_links(text, self.space), expected)
+
     def test_convert_wiki_link_with_spaces(self):
         """Should turn spaces into pluses when present in article title"""
         text = '[[Article Name]]'
